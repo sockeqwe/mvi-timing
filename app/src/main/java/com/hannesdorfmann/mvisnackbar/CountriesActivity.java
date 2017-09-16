@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
 import android.support.v4.widget.SwipeRefreshLayout;
+import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
@@ -20,6 +21,7 @@ public class CountriesActivity extends MviActivity<CountriesView, CountriesPrese
     implements CountriesView {
 
   private PublishSubject<Boolean> pullToRefreshSubject = PublishSubject.create();
+  private PublishSubject<Long> dismissPullToRefreshError = PublishSubject.create();
   private Snackbar snackbar;
   private ArrayAdapter<String> adapter;
 
@@ -53,6 +55,10 @@ public class CountriesActivity extends MviActivity<CountriesView, CountriesPrese
     return pullToRefreshSubject;
   }
 
+  @Override public Observable<Long> dismissPullToRefreshErrorIntent() {
+    return dismissPullToRefreshError;
+  }
+
   @Override public void render(CountriesViewState viewState) {
     if (viewState.isLoading()) {
       progressBar.setVisibility(View.VISIBLE);
@@ -65,14 +71,10 @@ public class CountriesActivity extends MviActivity<CountriesView, CountriesPrese
       adapter.clear();
       adapter.addAll(viewState.getCountries());
 
-      if (viewState.isPullToRefresh()) {
-        refreshLayout.post(() -> refreshLayout.setRefreshing(true));
-        dismissSnackbar();
-      }
+      refreshLayout.post(() -> refreshLayout.setRefreshing(viewState.isPullToRefresh()));
 
       if (viewState.isPullToRefreshError()) {
         showSnackbar();
-        refreshLayout.post(() -> refreshLayout.setRefreshing(false));
       } else {
         dismissSnackbar();
       }
@@ -86,6 +88,14 @@ public class CountriesActivity extends MviActivity<CountriesView, CountriesPrese
 
   private void showSnackbar() {
     snackbar = Snackbar.make(refreshLayout, "An Error has occurred", Snackbar.LENGTH_INDEFINITE);
+    snackbar.addCallback( new Snackbar.Callback(){
+      @Override public void onDismissed(Snackbar transientBottomBar, int event) {
+        if (event == DISMISS_EVENT_SWIPE){
+          // User swipes the snackbar away
+          dismissPullToRefreshError.onNext(0L);
+        }
+      }
+    });
     snackbar.show();
   }
 }

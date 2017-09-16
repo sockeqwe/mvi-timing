@@ -16,15 +16,23 @@ public class CountriesPresenter extends MviBasePresenter<CountriesView, Countrie
 
   @Override protected void bindIntents() {
 
-    Observable<RepositoryState> loadingData =
-        intent(CountriesView::loadCountriesIntent).switchMap(ignored -> repositroy.loadCountries());
+    Observable<RepositoryState> loadingData = intent(CountriesView::loadCountriesIntent).doOnNext(
+        ignored -> Log.d("CountriesPresenter", "load data intent"))
+        .switchMap(ignored -> repositroy.loadCountries());
+
+    Observable<Long> dismissPullToRefreshIntent =
+        intent(CountriesView::dismissPullToRefreshErrorIntent).doOnNext(
+            ignored -> Log.d("CountriesPresenter", "Dismiss pull to refresh error intent"));
 
     Observable<RepositoryState> pullToRefreshData =
-        intent(CountriesView::pullToRefreshIntent).switchMap(
-            ignored -> repositroy.reload().switchMap(repoState -> {
+        intent(CountriesView::pullToRefreshIntent).doOnNext(
+            ignored -> Log.d("CountriesPresenter", "pull to refresh intent"))
+            .switchMap(ignored -> repositroy.reload().switchMap(repoState -> {
               if (repoState instanceof PullToRefreshError) {
                 // Let's show Snackbar for 2 seconds and then dismiss it
-                return Observable.timer(2, TimeUnit.SECONDS)
+                return Observable.timer(3, TimeUnit.SECONDS)
+                    .mergeWith(dismissPullToRefreshIntent)
+                    .take(1)
                     .map(ignoredTime -> new ShowCountries()) // Show just the list
                     .cast(RepositoryState.class)
                     .startWith(repoState); // repoState == PullToRefreshError

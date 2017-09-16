@@ -26,6 +26,13 @@ public interface CountriesView extends MvpView {
   Observable<Boolean> pullToRefreshIntent();
 
   /**
+   * Dismisses the pull to refresh error
+   *
+   * @return the emitted item (long) can be ignored (has no meaning).
+   */
+  Observable<Long> dismissPullToRefreshErrorIntent();
+
+  /**
    * Renders the state
    *
    * @param viewState The ViewState
